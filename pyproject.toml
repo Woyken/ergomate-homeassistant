@@ -1,6 +1,6 @@
 [project]
 name = "ergomate-homeassistant"
-version = "1.0.1"
+version = "1.0.2"
 description = "Home Assistant integration for Ergomate standing desks via Bluetooth Low Energy"
 readme = "README.md"
 license = "MIT"
