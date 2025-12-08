@@ -15,7 +15,7 @@ from homeassistant.components.bluetooth import (
 from homeassistant.const import CONF_ADDRESS, CONF_NAME
 from homeassistant.data_entry_flow import FlowResult
 
-from .const import DOMAIN, CONF_HEIGHT_OFFSET
+from .const import DOMAIN
 from .desk_const import SERVICE_UUID, DEVICE_NAME_PREFIX_CLASSIC
 
 _LOGGER = logging.getLogger(__name__)
@@ -24,7 +24,6 @@ STEP_USER_DATA_SCHEMA = vol.Schema(
     {
         vol.Required(CONF_ADDRESS): str,
         vol.Optional(CONF_NAME, default="Ergomate Desk"): str,
-        vol.Optional(CONF_HEIGHT_OFFSET, default=0.0): float,
     }
 )
 
@@ -73,7 +72,6 @@ class ConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
                 {
                     vol.Required(CONF_ADDRESS): vol.In(valid_devices),
                     vol.Optional(CONF_NAME, default="Ergomate Desk"): str,
-                    vol.Optional(CONF_HEIGHT_OFFSET, default=0.0): float,
                 }
             )
         else:

@@ -116,16 +116,6 @@ class ErgomateDesk:
         return self._address
 
     @property
-    def height_offset(self) -> float:
-        """Return the height offset in cm."""
-        return self._height_offset
-
-    @height_offset.setter
-    def height_offset(self, value: float) -> None:
-        """Set the height offset in cm."""
-        self._height_offset = value
-
-    @property
     def is_connected(self) -> bool:
         """Return True if connected to the desk."""
         return (
@@ -136,12 +126,12 @@ class ErgomateDesk:
 
     @property
     def raw_height(self) -> Optional[float]:
-        """Return raw height from BLE in cm (without offset)."""
+        """Return raw height from BLE in cm."""
         return self._raw_height
 
     @property
     def current_height(self) -> Optional[float]:
-        """Return current desk height in cm (with offset applied)."""
+        """Return current desk height in cm."""
         return self._current_height
 
     @property
@@ -381,8 +371,8 @@ class ErgomateDesk:
         raw_height = self._parse_height(data)
         if raw_height is not None:
             self._raw_height = raw_height
-            self._current_height = raw_height + self._height_offset
-            _LOGGER.debug("Height: %.1f cm (raw: %.1f cm)", self._current_height, raw_height)
+            self._current_height = raw_height
+            _LOGGER.debug("Height: %.1f cm", self._current_height)
 
         # Forward to user callbacks
         for callback in self._callbacks:

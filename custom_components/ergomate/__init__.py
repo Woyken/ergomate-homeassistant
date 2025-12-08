@@ -18,9 +18,8 @@ PLATFORMS: list[Platform] = [Platform.COVER, Platform.SENSOR]
 async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
     """Set up Ergomate from a config entry."""
     address = entry.data["address"]
-    height_offset = entry.data.get("height_offset", 0.0)
 
-    desk = ErgomateDesk(address, height_offset)
+    desk = ErgomateDesk(address)
 
     hass.data.setdefault(DOMAIN, {})
     hass.data[DOMAIN][entry.entry_id] = desk
