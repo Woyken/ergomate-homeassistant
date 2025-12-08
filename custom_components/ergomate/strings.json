@@ -1,0 +1,22 @@
+{
+  "config": {
+    "step": {
+      "user": {
+        "data": {
+          "address": "Bluetooth Address",
+          "name": "Device Name",
+          "height_offset": "Height Offset (cm)"
+        },
+        "description": "Enter the Bluetooth address of your Ergomate desk."
+      }
+    },
+    "error": {
+      "cannot_connect": "Failed to connect",
+      "unknown": "Unexpected error"
+    },
+    "abort": {
+      "already_configured": "Device is already configured",
+      "not_supported": "Device not supported"
+    }
+  }
+}

@@ -1,0 +1,12 @@
+{
+  "domain": "ergomate",
+  "name": "Ergomate Standing Desk",
+  "codeowners": [],
+  "config_flow": true,
+  "dependencies": ["bluetooth"],
+  "documentation": "https://github.com/yourusername/ergomate-ha",
+  "iot_class": "local_push",
+  "issue_tracker": "https://github.com/yourusername/ergomate-ha/issues",
+  "requirements": ["bleak>=0.19.0"],
+  "version": "1.0.0"
+}
