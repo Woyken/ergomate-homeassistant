@@ -111,6 +111,10 @@ class ErgomateDesk:
         self._movement_timer: Optional[asyncio.TimerHandle] = None
         self._reconnect_task: Optional[asyncio.Task] = None
         self._shutdown = False
+        
+        # Glitch filtering
+        self._pending_height: Optional[float] = None
+        self._pending_count = 0
 
     @property
     def address(self) -> str:
@@ -425,6 +429,33 @@ class ErgomateDesk:
         # Parse height from ASCII data (e.g., "0720" = 72.0 cm)
         raw_height = self._parse_height(data)
         if raw_height is not None:
+            # Glitch filtering: Ignore sudden large jumps (> 5cm) unless they persist
+            # This filters out occasional "60.0 cm" (0600) glitches when desk is actually higher
+            if self._current_height is not None:
+                diff = abs(raw_height - self._current_height)
+                if diff > 5.0:
+                    if raw_height == self._pending_height:
+                        self._pending_count += 1
+                    else:
+                        self._pending_height = raw_height
+                        self._pending_count = 1
+                    
+                    # Require 3 consecutive packets (approx 500ms) to accept a large jump
+                    if self._pending_count < 3:
+                        _LOGGER.debug(
+                            "Ignoring suspicious height jump from %.1f to %.1f (Count: %d)", 
+                            self._current_height, raw_height, self._pending_count
+                        )
+                        return
+                    else:
+                        _LOGGER.debug("Accepting large height jump to %.1f after confirmation", raw_height)
+                        self._pending_height = None
+                        self._pending_count = 0
+                else:
+                    # Normal change, reset pending
+                    self._pending_height = None
+                    self._pending_count = 0
+
             # Determine direction
             if self._current_height is not None:
                 if raw_height > self._current_height:

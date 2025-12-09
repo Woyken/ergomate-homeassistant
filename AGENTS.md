@@ -98,6 +98,20 @@ Height updates arrive as 4-byte ASCII strings:
 
 ### 2. Initial Connection Silence
 - **Observation**: The desk does **not** automatically send a height notification upon connection.
+- **Handling**: Send a `CMD_STOP` (`0xA5 0x00 0x00 0xFF 0xFF`) immediately after subscribing to notifications. This forces the desk to report its current status.
+
+### 3. The "0070" Glitch
+- **Observation**: The desk occasionally sends ASCII `"0070"` (7.0 cm).
+- **Handling**: Filtered by the standard range check (60-135 cm).
+
+### 4. The "0600" Glitch (False Reset)
+- **Observation**: The desk may report ASCII `"0600"` (60.0 cm) suddenly, even when the physical height is much higher (e.g., 76 cm). This appears to be a controller reset or communication error.
+- **Handling**: Implement a "Max Jump" filter. Ignore sudden height changes > 5.0 cm unless the new value persists for at least 3 consecutive packets (~500ms). This prevents the UI from jumping to 60cm and back.
+
+### 5. Precision Limitations
+- **Observation**: While the protocol supports 1mm precision (e.g., "0771" = 77.1 cm), the desk controller often rounds reported height to the nearest centimeter or has limited internal resolution.
+- **Impact**: A target of 77.1 cm might result in the desk moving slightly but still reporting 77.0 cm.
+- **Handling**: The integration supports float values, but users should be aware that the *reported* state might not perfectly match the *target* state due to hardware limitations.
 - **Impact**: Entities show "Unknown" state on restart until the desk is moved.
 - **Handling**: The `subscribe_notifications()` method must explicitly call `read_gatt_char()` on the read characteristic (`...ff01`) to fetch the initial state.
 
