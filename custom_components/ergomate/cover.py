@@ -107,15 +107,12 @@ class ErgomateDeskCover(CoverEntity):
     @property
     def is_opening(self) -> bool | None:
         """Return if the cover is opening or not."""
-        # We don't strictly know direction without tracking state history,
-        # but we know if it's moving.
-        # For now, just return None or implement direction tracking in desk_api
-        return self._desk.is_moving
+        return self._desk.is_moving and self._desk.moving_direction == 1
 
     @property
     def is_closing(self) -> bool | None:
         """Return if the cover is closing or not."""
-        return None
+        return self._desk.is_moving and self._desk.moving_direction == -1
 
     async def async_open_cover(self, **kwargs: Any) -> None:
         """Open the cover (Move Up)."""

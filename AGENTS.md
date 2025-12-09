@@ -89,6 +89,22 @@ Height updates arrive as 4-byte ASCII strings:
 - Format: 4 ASCII digits representing mm
 - Example: `0x30 0x37 0x32 0x30` → "0720" → 720mm → 72.0cm
 
+## Protocol Quirks & Implementation Notes
+
+### 1. The "2032" Glitch
+- **Observation**: The desk occasionally sends the ASCII string `"2032"` (Hex `32 30 33 32`).
+- **Impact**: Parsed as 203.2 cm, which is physically impossible (max ~130 cm).
+- **Handling**: Implementations **MUST** include a range check (e.g., `60.0 <= height <= 135.0`) to filter these values.
+
+### 2. Initial Connection Silence
+- **Observation**: The desk does **not** automatically send a height notification upon connection.
+- **Impact**: Entities show "Unknown" state on restart until the desk is moved.
+- **Handling**: The `subscribe_notifications()` method must explicitly call `read_gatt_char()` on the read characteristic (`...ff01`) to fetch the initial state.
+
+### 3. Native App Masking
+- **Observation**: The native app processes bytes using a mask `byte & 0xCF`.
+- **Advice**: Do **not** replicate this. It is permissive and allows glitches. Use standard ASCII decoding combined with the range check.
+
 ## Key Classes
 
 ### `ErgomateDesk` (`desk_api.py`)
@@ -519,7 +535,7 @@ logger:
 - `"Connection lost, attempting to reconnect..."` - Auto-reconnect triggered
 - `"Sending command 0x%02X to desk: %s"` - Command being sent
 - `"Moving to height %.1f cm (cmd: %s)"` - Height command
-- `"Received notification from %s: %s"` - Height update received
+- `"Received notification from %s: %s"` - Height update received (Recommended: Log both Hex and ASCII to identify glitches like "2032")
 - `"Height: %.1f cm (raw: %.1f cm)"` - Parsed height
 
 ## Known Limitations

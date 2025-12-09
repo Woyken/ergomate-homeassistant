@@ -12,7 +12,7 @@ from .desk_api import ErgomateDesk
 
 _LOGGER = logging.getLogger(__name__)
 
-PLATFORMS: list[Platform] = [Platform.COVER, Platform.SENSOR]
+PLATFORMS: list[Platform] = [Platform.COVER, Platform.SENSOR, Platform.NUMBER]
 
 
 async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:

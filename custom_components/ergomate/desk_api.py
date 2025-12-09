@@ -107,6 +107,8 @@ class ErgomateDesk:
         self._current_height: Optional[float] = None
         self._raw_height: Optional[float] = None
         self._is_moving = False
+        self._moving_direction = 0  # 0: Stop, 1: Up, -1: Down
+        self._movement_timer: Optional[asyncio.TimerHandle] = None
         self._reconnect_task: Optional[asyncio.Task] = None
         self._shutdown = False
 
@@ -138,6 +140,34 @@ class ErgomateDesk:
     def is_moving(self) -> bool:
         """Return True if the desk is currently moving."""
         return self._is_moving
+
+    @property
+    def moving_direction(self) -> int:
+        """Return movement direction: 1 (Up), -1 (Down), 0 (Stopped)."""
+        return self._moving_direction
+
+    def _reset_movement_state(self) -> None:
+        """Reset movement state to stopped."""
+        self._is_moving = False
+        self._moving_direction = 0
+        self._movement_timer = None
+        _LOGGER.debug("Movement stopped (timeout)")
+        # Notify callbacks to update HA state
+        for callback in self._callbacks:
+            try:
+                callback(0, b'')
+            except Exception:
+                pass
+
+    def _schedule_movement_timeout(self, timeout: float = 1.5) -> None:
+        """Schedule a timeout to reset movement state."""
+        if self._movement_timer:
+            self._movement_timer.cancel()
+        try:
+            loop = asyncio.get_running_loop()
+            self._movement_timer = loop.call_later(timeout, self._reset_movement_state)
+        except RuntimeError:
+            _LOGGER.warning("Could not schedule movement timeout (no running loop)")
 
     async def _establish_connection(self) -> None:
         """Internal method to establish connection."""
@@ -261,6 +291,8 @@ class ErgomateDesk:
         """
         _LOGGER.debug("Moving desk up")
         self._is_moving = True
+        self._moving_direction = 1
+        self._schedule_movement_timeout(2.0)
         await self._send_command(CMD_UP)
 
     async def move_down(self) -> None:
@@ -271,6 +303,8 @@ class ErgomateDesk:
         """
         _LOGGER.debug("Moving desk down")
         self._is_moving = True
+        self._moving_direction = -1
+        self._schedule_movement_timeout(2.0)
         await self._send_command(CMD_DOWN)
 
     async def stop(self) -> None:
@@ -278,6 +312,10 @@ class ErgomateDesk:
         _LOGGER.debug("Stopping desk")
         await self._send_command(CMD_STOP)
         self._is_moving = False
+        self._moving_direction = 0
+        if self._movement_timer:
+            self._movement_timer.cancel()
+            self._movement_timer = None
 
     async def move_up_for(self, duration: float) -> None:
         """
@@ -332,6 +370,13 @@ class ErgomateDesk:
         )
 
         self._is_moving = True
+        if self._current_height is not None:
+            if height_cm > self._current_height:
+                self._moving_direction = 1
+            elif height_cm < self._current_height:
+                self._moving_direction = -1
+
+        self._schedule_movement_timeout(2.0)
         await self._client.write_gatt_char(WRITE_CHARACTERISTIC_UUID, command, response=True)
 
     def _parse_height(self, data: bytearray) -> Optional[float]:
@@ -345,16 +390,26 @@ class ErgomateDesk:
             data: Raw notification data
 
         Returns:
-            Height in cm, or None if parsing fails
+            Height in cm, or None if parsing fails or out of valid range
         """
+        # Debug log to see exactly what bytes are coming in
+        _LOGGER.debug("Parsing height data - Bytes: %s, Hex: %s, ASCII: %s",
+                     list(data), data.hex(), data.decode('ascii', errors='replace'))
+
         try:
             if len(data) == 4:
                 # Data is ASCII digits representing height in mm
                 height_mm = int(data.decode('ascii'))
                 height_cm = height_mm / 10.0
-                return height_cm
+
+                # Validate height is within physical desk range (60-135cm with margin)
+                # Desk firmware reports 650-1300mm (65-130cm), allow some margin
+                if 60.0 <= height_cm <= 135.0:
+                    return height_cm
+                else:
+                    _LOGGER.debug("Height %.1f cm out of valid range (60-135), ignoring. Raw data: %s", height_cm, data.hex())
         except (ValueError, UnicodeDecodeError) as err:
-            _LOGGER.debug("Failed to parse height: %s", err)
+            _LOGGER.debug("Failed to parse height: %s. Raw data: %s", err, data.hex())
         return None
 
     def _handle_notification(self, sender: int, data: bytearray) -> None:
@@ -370,9 +425,22 @@ class ErgomateDesk:
         # Parse height from ASCII data (e.g., "0720" = 72.0 cm)
         raw_height = self._parse_height(data)
         if raw_height is not None:
+            # Determine direction
+            if self._current_height is not None:
+                if raw_height > self._current_height:
+                    self._moving_direction = 1
+                    self._is_moving = True
+                elif raw_height < self._current_height:
+                    self._moving_direction = -1
+                    self._is_moving = True
+                # If equal, keep previous state/direction
+
             self._raw_height = raw_height
             self._current_height = raw_height
             _LOGGER.debug("Height: %.1f cm", self._current_height)
+
+            # Reset movement state if no updates received for a while
+            self._schedule_movement_timeout(1.5)
 
         # Forward to user callbacks
         for callback in self._callbacks:
@@ -406,6 +474,26 @@ class ErgomateDesk:
             self._handle_notification
         )
         _LOGGER.debug("Subscribed to notifications")
+
+        # Read initial value
+        try:
+            # Attempt direct read first (often returns 00)
+            initial_value = await self._client.read_gatt_char(READ_CHARACTERISTIC_UUID)
+            _LOGGER.debug("Read initial height value: %s", initial_value.hex())
+
+            # If read returns empty/zero, try to wake up desk with STOP command
+            if not initial_value or initial_value == b'\x00':
+                _LOGGER.debug("Initial read empty, sending STOP command to request status...")
+                # Send STOP command to trigger a notification update
+                # We construct packet manually to avoid circular dependency or state checks in _send_command
+                stop_cmd = _create_command(CMD_STOP)
+                await self._client.write_gatt_char(WRITE_CHARACTERISTIC_UUID, stop_cmd, response=True)
+            else:
+                # Manually trigger handler with valid initial value
+                # We use 0 as sender handle since it's a manual read
+                self._handle_notification(0, initial_value)
+        except Exception as err:
+            _LOGGER.warning("Failed to read initial height: %s", err)
 
     async def unsubscribe_notifications(self) -> None:
         """Unsubscribe from desk notifications."""
