@@ -68,6 +68,11 @@ class ErgomateDeskHeightNumber(NumberEntity):
         self.async_write_ha_state()
 
     @property
+    def available(self) -> bool:
+        """Return True if entity is available."""
+        return self._desk.is_connected
+
+    @property
     def native_value(self) -> float | None:
         """Return the current value."""
         return self._desk.current_height

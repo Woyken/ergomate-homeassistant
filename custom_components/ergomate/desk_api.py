@@ -111,7 +111,7 @@ class ErgomateDesk:
         self._movement_timer: Optional[asyncio.TimerHandle] = None
         self._reconnect_task: Optional[asyncio.Task] = None
         self._shutdown = False
-        
+
         # Glitch filtering
         self._pending_height: Optional[float] = None
         self._pending_count = 0
@@ -184,6 +184,13 @@ class ErgomateDesk:
         self._is_connected = True
         _LOGGER.info("Connected to desk at %s", self._address)
 
+        # Notify callbacks to update HA state (availability)
+        for callback in self._callbacks:
+            try:
+                callback(0, b'')
+            except Exception:
+                pass
+
     async def connect(self) -> None:
         """
         Connect to the desk via BLE and start auto-reconnect loop.
@@ -218,6 +225,12 @@ class ErgomateDesk:
         _LOGGER.info("Disconnected from desk at %s", self._address)
         self._is_connected = False
         self._is_moving = False
+        # Notify callbacks to update HA state (availability)
+        for callback in self._callbacks:
+            try:
+                callback(0, b'')
+            except Exception:
+                pass
 
     async def disconnect(self) -> None:
         """Disconnect from the desk."""
@@ -439,11 +452,11 @@ class ErgomateDesk:
                     else:
                         self._pending_height = raw_height
                         self._pending_count = 1
-                    
+
                     # Require 3 consecutive packets (approx 500ms) to accept a large jump
                     if self._pending_count < 3:
                         _LOGGER.debug(
-                            "Ignoring suspicious height jump from %.1f to %.1f (Count: %d)", 
+                            "Ignoring suspicious height jump from %.1f to %.1f (Count: %d)",
                             self._current_height, raw_height, self._pending_count
                         )
                         return

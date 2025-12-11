@@ -78,6 +78,11 @@ class ErgomateDeskCover(CoverEntity):
         self.async_write_ha_state()
 
     @property
+    def available(self) -> bool:
+        """Return True if entity is available."""
+        return self._desk.is_connected
+
+    @property
     def is_closed(self) -> bool | None:
         """Return if the cover is closed (at min height)."""
         if self._desk.current_height is None:
