@@ -11,14 +11,17 @@ from homeassistant.components.cover import (
 )
 from homeassistant.config_entries import ConfigEntry
 from homeassistant.core import HomeAssistant
+from homeassistant.exceptions import HomeAssistantError
 from homeassistant.helpers.entity_platform import AddEntitiesCallback
-from homeassistant.helpers.entity import DeviceInfo
 
 from .const import DOMAIN
 from .desk_api import ErgomateDesk
 from .desk_const import DEFAULT_MIN_HEIGHT, DEFAULT_MAX_HEIGHT
+from .entity import ErgomateEntity
 
 _LOGGER = logging.getLogger(__name__)
+
+PARALLEL_UPDATES = 1
 
 
 async def async_setup_entry(
@@ -27,41 +30,31 @@ async def async_setup_entry(
     async_add_entities: AddEntitiesCallback,
 ) -> None:
     """Set up the Ergomate cover."""
-    desk: ErgomateDesk = hass.data[DOMAIN][entry.entry_id]
+    desk: ErgomateDesk = entry.runtime_data
     async_add_entities([ErgomateDeskCover(desk, entry)])
 
 
-class ErgomateDeskCover(CoverEntity):
+class ErgomateDeskCover(ErgomateEntity, CoverEntity):
     """Representation of an Ergomate Desk as a cover."""
 
-    _attr_device_class = CoverDeviceClass.DAMPER  # Or BLIND/SHADE, but DAMPER is generic enough or just None
+    _attr_device_class = CoverDeviceClass.DAMPER
     _attr_supported_features = (
         CoverEntityFeature.OPEN
         | CoverEntityFeature.CLOSE
         | CoverEntityFeature.STOP
         | CoverEntityFeature.SET_POSITION
     )
-    _attr_has_entity_name = True
     _attr_name = None
 
     def __init__(self, desk: ErgomateDesk, entry: ConfigEntry) -> None:
         """Initialize the cover."""
-        self._desk = desk
-        self._entry = entry
-        self._attr_unique_id = f"{entry.entry_id}_cover"
-        self._attr_device_info = DeviceInfo(
-            identifiers={(DOMAIN, entry.entry_id)},
-            name=entry.title,
-            manufacturer="Ergomate",
-            model="Classic",
-        )
+        super().__init__(desk, entry, "cover")
         self._min_height = DEFAULT_MIN_HEIGHT
         self._max_height = DEFAULT_MAX_HEIGHT
 
     async def async_added_to_hass(self) -> None:
         """Run when entity about to be added to hass."""
-        # Subscribe to notifications to update position
-        self._desk.register_callback(self._notification_callback)
+        await super().async_added_to_hass()
         try:
             await self._desk.connect()
             await self._desk.subscribe_notifications()
@@ -70,12 +63,8 @@ class ErgomateDeskCover(CoverEntity):
 
     async def async_will_remove_from_hass(self) -> None:
         """Run when entity will be removed from hass."""
-        self._desk.unregister_callback(self._notification_callback)
+        await super().async_will_remove_from_hass()
         await self._desk.disconnect()
-
-    def _notification_callback(self, sender: int, data: bytearray) -> None:
-        """Handle height updates."""
-        self.async_write_ha_state()
 
     @property
     def available(self) -> bool:
@@ -121,15 +110,24 @@ class ErgomateDeskCover(CoverEntity):
 
     async def async_open_cover(self, **kwargs: Any) -> None:
         """Open the cover (Move Up)."""
-        await self._desk.move_up()
+        try:
+            await self._desk.move_up()
+        except Exception as err:
+            raise HomeAssistantError(f"Failed to move desk up: {err}") from err
 
     async def async_close_cover(self, **kwargs: Any) -> None:
         """Close the cover (Move Down)."""
-        await self._desk.move_down()
+        try:
+            await self._desk.move_down()
+        except Exception as err:
+            raise HomeAssistantError(f"Failed to move desk down: {err}") from err
 
     async def async_stop_cover(self, **kwargs: Any) -> None:
         """Stop the cover."""
-        await self._desk.stop()
+        try:
+            await self._desk.stop()
+        except Exception as err:
+            raise HomeAssistantError(f"Failed to stop desk: {err}") from err
 
     async def async_set_cover_position(self, **kwargs: Any) -> None:
         """Move the cover to a specific position."""
@@ -139,4 +137,7 @@ class ErgomateDeskCover(CoverEntity):
         range_cm = self._max_height - self._min_height
         target_height = self._min_height + (position / 100.0) * range_cm
 
-        await self._desk.move_to_height(target_height)
+        try:
+            await self._desk.move_to_height(target_height)
+        except Exception as err:
+            raise HomeAssistantError(f"Failed to move desk to position {position}: {err}") from err

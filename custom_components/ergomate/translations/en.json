@@ -1,0 +1,60 @@
+{
+  "config": {
+    "step": {
+      "user": {
+        "title": "Set up Ergomate Desk",
+        "description": "Select your Ergomate desk from the list or enter its Bluetooth address manually.",
+        "data": {
+          "address": "Bluetooth Address",
+          "name": "Device Name"
+        }
+      },
+      "reconfigure": {
+        "title": "Reconfigure Ergomate Desk",
+        "description": "Update the Bluetooth address or name of your Ergomate desk.",
+        "data": {
+          "address": "Bluetooth Address",
+          "name": "Device Name"
+        }
+      },
+      "bluetooth_confirm": {
+        "title": "Discovered Ergomate Desk",
+        "description": "Do you want to add the Ergomate desk '{name}' to Home Assistant?"
+      }
+    },
+    "error": {
+      "cannot_connect": "Failed to connect to the desk. Make sure it's powered on and in range.",
+      "unknown": "An unexpected error occurred. Please try again.",
+      "already_configured": "This desk is already configured."
+    },
+    "abort": {
+      "already_configured": "This desk is already configured.",
+      "not_supported": "This device is not a supported Ergomate desk.",
+      "cannot_connect": "Unable to connect to the desk.",
+      "no_devices_found": "No Ergomate desks found on the network."
+    }
+  },
+  "options": {
+    "step": {
+      "init": {
+        "title": "Ergomate Desk Options",
+        "description": "Configure your Ergomate desk settings.",
+        "data": {
+          "name": "Device Name"
+        }
+      }
+    }
+  },
+  "entity": {
+    "sensor": {
+      "height": {
+        "name": "Height"
+      }
+    },
+    "number": {
+      "target_height": {
+        "name": "Target Height"
+      }
+    }
+  }
+}

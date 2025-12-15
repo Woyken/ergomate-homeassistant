@@ -90,17 +90,14 @@ def _create_height_command(height_mm: int) -> bytes:
 class ErgomateDesk:
     """BLE wrapper for ErgoMate Classic standing desk control."""
 
-    def __init__(self, address: str, height_offset: float = 0.0) -> None:
+    def __init__(self, address: str) -> None:
         """
         Initialize desk controller.
 
         Args:
             address: BLE MAC address of the desk (e.g., "AA:BB:CC:DD:EE:FF")
-            height_offset: Offset to apply to raw height reading (default: 0.0 cm)
-                          Adjust this if BLE height differs from control module display.
         """
         self._address = address
-        self._height_offset = height_offset
         self._client: Optional[BleakClient] = None
         self._is_connected = False
         self._callbacks: list[Callable[[int, bytearray], None]] = []
@@ -111,6 +108,7 @@ class ErgomateDesk:
         self._movement_timer: Optional[asyncio.TimerHandle] = None
         self._reconnect_task: Optional[asyncio.Task] = None
         self._shutdown = False
+        self._logged_unavailable = False  # Track if we've logged unavailability
 
         # Glitch filtering
         self._pending_height: Optional[float] = None
@@ -182,7 +180,13 @@ class ErgomateDesk:
         self._client = BleakClient(self._address, disconnected_callback=self._on_disconnected)
         await self._client.connect()
         self._is_connected = True
-        _LOGGER.info("Connected to desk at %s", self._address)
+
+        # Log once when reconnected after being unavailable
+        if self._logged_unavailable:
+            _LOGGER.info("Reconnected to desk at %s", self._address)
+            self._logged_unavailable = False
+        else:
+            _LOGGER.info("Connected to desk at %s", self._address)
 
         # Notify callbacks to update HA state (availability)
         for callback in self._callbacks:
@@ -222,7 +226,10 @@ class ErgomateDesk:
 
     def _on_disconnected(self, client: BleakClient) -> None:
         """Handle disconnection."""
-        _LOGGER.info("Disconnected from desk at %s", self._address)
+        # Log once when becoming unavailable
+        if not self._logged_unavailable:
+            _LOGGER.warning("Desk at %s is unavailable", self._address)
+            self._logged_unavailable = True
         self._is_connected = False
         self._is_moving = False
         # Notify callbacks to update HA state (availability)

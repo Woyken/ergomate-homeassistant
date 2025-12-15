@@ -4,10 +4,16 @@
       "user": {
         "data": {
           "address": "Bluetooth Address",
-          "name": "Device Name",
-          "height_offset": "Height Offset (cm)"
+          "name": "Device Name"
         },
         "description": "Enter the Bluetooth address of your Ergomate desk."
+      },
+      "reconfigure": {
+        "data": {
+          "address": "Bluetooth Address",
+          "name": "Device Name"
+        },
+        "description": "Reconfigure the Ergomate desk."
       }
     },
     "error": {
@@ -16,7 +22,30 @@
     },
     "abort": {
       "already_configured": "Device is already configured",
-      "not_supported": "Device not supported"
+      "not_supported": "Device not supported",
+      "no_devices_found": "No devices found on the network"
+    }
+  },
+  "options": {
+    "step": {
+      "init": {
+        "data": {
+          "name": "Device Name"
+        },
+        "description": "Configure Ergomate options."
+      }
+    }
+  },
+  "entity": {
+    "sensor": {
+      "height": {
+        "name": "Height"
+      }
+    },
+    "number": {
+      "target_height": {
+        "name": "Target Height"
+      }
     }
   }
 }

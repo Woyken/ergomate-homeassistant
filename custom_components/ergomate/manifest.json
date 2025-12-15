@@ -1,12 +1,20 @@
 {
   "domain": "ergomate",
   "name": "Ergomate Standing Desk",
-  "codeowners": [],
+  "codeowners": ["@Woyken"],
   "config_flow": true,
   "dependencies": ["bluetooth"],
+  "bluetooth": [
+    {
+      "service_uuid": "0000ff00-0000-1000-8000-00805f9b34fb"
+    },
+    {
+      "local_name": "BLT_*"
+    }
+  ],
   "documentation": "https://github.com/Woyken/ergomate-homeassistant",
   "iot_class": "local_push",
   "issue_tracker": "https://github.com/Woyken/ergomate-homeassistant/issues",
   "requirements": ["bleak>=0.19.0"],
-  "version": "1.1.3"
+  "version": "1.2.0"
 }
