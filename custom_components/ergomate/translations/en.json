@@ -19,7 +19,7 @@
       },
       "bluetooth_confirm": {
         "title": "Discovered Ergomate Desk",
-        "description": "Do you want to add the Ergomate desk '{name}' to Home Assistant?"
+        "description": "Do you want to add the Ergomate desk {name} to Home Assistant?"
       }
     },
     "error": {
