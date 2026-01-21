@@ -2,6 +2,7 @@
 
 import asyncio
 import logging
+import time
 from typing import Callable, Optional
 
 from bleak import BleakClient, BleakScanner
@@ -113,6 +114,7 @@ class ErgomateDesk:
         # Glitch filtering
         self._pending_height: Optional[float] = None
         self._pending_count = 0
+        self._pending_timestamp: float = 0.0  # Track when pending height was first seen
 
     @property
     def address(self) -> str:
@@ -454,11 +456,24 @@ class ErgomateDesk:
             if self._current_height is not None:
                 diff = abs(raw_height - self._current_height)
                 if diff > 5.0:
-                    if raw_height == self._pending_height:
-                        self._pending_count += 1
-                    else:
+                    current_time = time.monotonic()
+
+                    # Reset pending count if this is a different height or too much time has passed
+                    if raw_height != self._pending_height:
                         self._pending_height = raw_height
                         self._pending_count = 1
+                        self._pending_timestamp = current_time
+                    else:
+                        # Check if the pending height reading is stale (> 10 seconds old)
+                        if current_time - self._pending_timestamp > 10.0:
+                            _LOGGER.debug(
+                                "Resetting stale pending height (%.1f seconds old)",
+                                current_time - self._pending_timestamp
+                            )
+                            self._pending_count = 1
+                            self._pending_timestamp = current_time
+                        else:
+                            self._pending_count += 1
 
                     # Require 3 consecutive packets (approx 500ms) to accept a large jump
                     if self._pending_count < 3:
@@ -471,10 +486,12 @@ class ErgomateDesk:
                         _LOGGER.debug("Accepting large height jump to %.1f after confirmation", raw_height)
                         self._pending_height = None
                         self._pending_count = 0
+                        self._pending_timestamp = 0.0
                 else:
                     # Normal change, reset pending
                     self._pending_height = None
                     self._pending_count = 0
+                    self._pending_timestamp = 0.0
 
             # Determine direction
             if self._current_height is not None:
