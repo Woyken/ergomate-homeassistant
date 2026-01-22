@@ -6,12 +6,20 @@
           "address": "Bluetooth Address",
           "name": "Device Name"
         },
+        "data_description": {
+          "address": "Select a discovered desk or enter its Bluetooth MAC address manually.",
+          "name": "Friendly name shown in Home Assistant."
+        },
         "description": "Enter the Bluetooth address of your Ergomate desk."
       },
       "reconfigure": {
         "data": {
           "address": "Bluetooth Address",
           "name": "Device Name"
+        },
+        "data_description": {
+          "address": "Select a discovered desk or enter its Bluetooth MAC address manually.",
+          "name": "Friendly name shown in Home Assistant."
         },
         "description": "Reconfigure the Ergomate desk."
       }
@@ -32,6 +40,10 @@
         "data": {
           "name": "Device Name",
           "height_offset": "Height Offset (cm)"
+        },
+        "data_description": {
+          "name": "Friendly name shown in Home Assistant.",
+          "height_offset": "Calibrates the displayed height. Positive values increase reported height; negative values decrease it. Example: If the desk reads 72.0 cm but measures 70.0 cm physically, set offset to -2.0."
         },
         "description": "Configure Ergomate options."
       }

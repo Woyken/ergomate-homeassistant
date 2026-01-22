@@ -51,6 +51,14 @@ Control your Ergomate standing desk via Bluetooth Low Energy (BLE) from Home Ass
 4. Select your desk from the discovered devices
 5. Done!
 
+### Options
+
+- **Height Offset (cm)**: Calibrates the displayed and target height for your desk. Use this if your desk's physical height differs from what the app reports.
+	- Default: 0.0 cm
+	- Positive values increase displayed height; negative values decrease it
+	- Applies to the height sensor, the number control, and cover position mapping (65–130 cm range)
+	- Example: If the desk reads 72.0 cm but measures 70.0 cm physically, set offset to `-2.0`
+
 ## Entities
 
 ### Cover: `cover.ergomate_desk`

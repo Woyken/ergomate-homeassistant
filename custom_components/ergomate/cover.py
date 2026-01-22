@@ -49,8 +49,16 @@ class ErgomateDeskCover(ErgomateEntity, CoverEntity):
     def __init__(self, desk: ErgomateDesk, entry: ConfigEntry) -> None:
         """Initialize the cover."""
         super().__init__(desk, entry, "cover")
-        self._min_height = DEFAULT_MIN_HEIGHT
-        self._max_height = DEFAULT_MAX_HEIGHT
+
+    @property
+    def _min_height(self) -> float:
+        """Return minimum height with offset applied."""
+        return DEFAULT_MIN_HEIGHT + self.height_offset
+
+    @property
+    def _max_height(self) -> float:
+        """Return maximum height with offset applied."""
+        return DEFAULT_MAX_HEIGHT + self.height_offset
 
     async def async_added_to_hass(self) -> None:
         """Run when entity about to be added to hass."""

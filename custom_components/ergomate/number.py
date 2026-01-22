@@ -42,8 +42,16 @@ class ErgomateDeskHeightNumber(ErgomateEntity, NumberEntity):
     def __init__(self, desk: ErgomateDesk, entry: ConfigEntry) -> None:
         """Initialize the number."""
         super().__init__(desk, entry, "target_height")
-        self._attr_native_min_value = float(DEFAULT_MIN_HEIGHT)
-        self._attr_native_max_value = float(DEFAULT_MAX_HEIGHT)
+
+    @property
+    def native_min_value(self) -> float:
+        """Return the minimum value (physical min + offset)."""
+        return float(DEFAULT_MIN_HEIGHT) + self.height_offset
+
+    @property
+    def native_max_value(self) -> float:
+        """Return the maximum value (physical max + offset)."""
+        return float(DEFAULT_MAX_HEIGHT) + self.height_offset
 
     @property
     def native_value(self) -> float | None:
