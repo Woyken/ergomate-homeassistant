@@ -42,5 +42,7 @@ class ErgomateHeightSensor(ErgomateEntity, SensorEntity):
 
     @property
     def native_value(self) -> float | None:
-        """Return the state of the sensor."""
-        return self._desk.current_height
+        """Return the state of the sensor (with offset applied)."""
+        if self._desk.current_height is None:
+            return None
+        return round(self._desk.current_height + self.height_offset, 1)

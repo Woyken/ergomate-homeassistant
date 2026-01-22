@@ -40,7 +40,8 @@
         "title": "Ergomate Desk Options",
         "description": "Configure your Ergomate desk settings.",
         "data": {
-          "name": "Device Name"
+          "name": "Device Name",
+          "height_offset": "Height Offset (cm)"
         }
       }
     }

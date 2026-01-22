@@ -30,7 +30,8 @@
     "step": {
       "init": {
         "data": {
-          "name": "Device Name"
+          "name": "Device Name",
+          "height_offset": "Height Offset (cm)"
         },
         "description": "Configure Ergomate options."
       }

@@ -42,7 +42,8 @@ RESERVED = 0x00    # 0   - Always zero
 TERMINATOR = 0xFF  # 255 - End marker
 
 # Device name prefixes for discovery
-DEVICE_NAME_PREFIX_CLASSIC = "BLT_"
+# Support both classic BLT_ devices and MX series name prefix
+DEVICE_NAME_PREFIXES = ("BLT_", "MX")
 
 # Default height range (cm) - typical values
 DEFAULT_MIN_HEIGHT = 65

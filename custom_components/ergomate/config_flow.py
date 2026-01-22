@@ -14,10 +14,11 @@ from homeassistant.components.bluetooth import (
     async_discovered_service_info,
 )
 from homeassistant.const import CONF_ADDRESS, CONF_NAME
+from .const import CONF_HEIGHT_OFFSET, DEFAULT_HEIGHT_OFFSET
 from homeassistant.data_entry_flow import FlowResult
 
 from .const import DOMAIN
-from .desk_const import SERVICE_UUID, DEVICE_NAME_PREFIX_CLASSIC
+from .desk_const import SERVICE_UUID, DEVICE_NAME_PREFIXES
 
 _LOGGER = logging.getLogger(__name__)
 
@@ -84,7 +85,7 @@ class ConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
 
             if (
                 SERVICE_UUID in info.service_uuids
-                or info.name.startswith(DEVICE_NAME_PREFIX_CLASSIC)
+                or (info.name and any(info.name.startswith(p) for p in DEVICE_NAME_PREFIXES))
             ):
                 valid_devices[info.address] = f"{info.name} ({info.address})"
 
@@ -113,7 +114,7 @@ class ConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
         is_ergomate = False
         if SERVICE_UUID in discovery_info.service_uuids:
             is_ergomate = True
-        elif discovery_info.name.startswith(DEVICE_NAME_PREFIX_CLASSIC):
+        elif discovery_info.name and any(discovery_info.name.startswith(p) for p in DEVICE_NAME_PREFIXES):
             is_ergomate = True
 
         if not is_ergomate:
@@ -179,7 +180,7 @@ class ConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
         for info in current_discovered:
             if (
                 SERVICE_UUID in info.service_uuids
-                or info.name.startswith(DEVICE_NAME_PREFIX_CLASSIC)
+                or (info.name and any(info.name.startswith(p) for p in DEVICE_NAME_PREFIXES))
             ):
                 valid_devices[info.address] = f"{info.name} ({info.address})"
 
@@ -255,6 +256,10 @@ class OptionsFlowHandler(config_entries.OptionsFlow):
                         CONF_NAME,
                         default=self.config_entry.data.get(CONF_NAME, "Ergomate Desk"),
                     ): str,
+                    vol.Optional(
+                        CONF_HEIGHT_OFFSET,
+                        default=self.config_entry.options.get(CONF_HEIGHT_OFFSET, DEFAULT_HEIGHT_OFFSET),
+                    ): vol.Coerce(float),
                 }
             ),
         )

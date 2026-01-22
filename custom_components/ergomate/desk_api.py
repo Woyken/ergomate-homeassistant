@@ -18,7 +18,7 @@ from .desk_const import (
     HEADER,
     RESERVED,
     TERMINATOR,
-    DEVICE_NAME_PREFIX_CLASSIC,
+    DEVICE_NAME_PREFIXES,
     DEFAULT_SCAN_TIMEOUT,
 )
 
@@ -110,11 +110,6 @@ class ErgomateDesk:
         self._reconnect_task: Optional[asyncio.Task] = None
         self._shutdown = False
         self._logged_unavailable = False  # Track if we've logged unavailability
-
-        # Glitch filtering
-        self._pending_height: Optional[float] = None
-        self._pending_count = 0
-        self._pending_timestamp: float = 0.0  # Track when pending height was first seen
 
     @property
     def address(self) -> str:
@@ -419,21 +414,31 @@ class ErgomateDesk:
             Height in cm, or None if parsing fails or out of valid range
         """
         # Debug log to see exactly what bytes are coming in
-        _LOGGER.debug("Parsing height data - Bytes: %s, Hex: %s, ASCII: %s",
-                     list(data), data.hex(), data.decode('ascii', errors='replace'))
+        _LOGGER.debug("Parsing height data - Bytes: %s, Hex: %s",
+                     list(data), data.hex())
 
         try:
             if len(data) == 4:
-                # Data is ASCII digits representing height in mm
-                height_mm = int(data.decode('ascii'))
+                # App logic: Mask each byte with 0xCF (clears bits 4 and 5)
+                # This corresponds to native app's: buffer.map(byte => byte & 0xCF).join('')
+                # ASCII digits 0-9 (0x30-0x39) become 0-9 when masked with 0xCF.
+                # However, this robustly handles potential non-standard encoding.
+                digits = ""
+                for b in data:
+                    digits += str(b & 0xCF)
+
+                # Check for empty string
+                if not digits:
+                    return None
+
+                height_mm = int(digits)
                 height_cm = height_mm / 10.0
 
-                # Validate height is within physical desk range (60-135cm with margin)
-                # Desk firmware reports 650-1300mm (65-130cm), allow some margin
-                if 60.0 <= height_cm <= 135.0:
+                # Validate height is within strict protocol range (65-130cm)
+                if 65.0 <= height_cm <= 130.0:
                     return height_cm
                 else:
-                    _LOGGER.debug("Height %.1f cm out of valid range (60-135), ignoring. Raw data: %s", height_cm, data.hex())
+                    _LOGGER.debug("Height %.1f cm out of valid range (65-130), ignoring. Raw data: %s", height_cm, data.hex())
         except (ValueError, UnicodeDecodeError) as err:
             _LOGGER.debug("Failed to parse height: %s. Raw data: %s", err, data.hex())
         return None
@@ -451,48 +456,6 @@ class ErgomateDesk:
         # Parse height from ASCII data (e.g., "0720" = 72.0 cm)
         raw_height = self._parse_height(data)
         if raw_height is not None:
-            # Glitch filtering: Ignore sudden large jumps (> 5cm) unless they persist
-            # This filters out occasional "60.0 cm" (0600) glitches when desk is actually higher
-            if self._current_height is not None:
-                diff = abs(raw_height - self._current_height)
-                if diff > 5.0:
-                    current_time = time.monotonic()
-
-                    # Reset pending count if this is a different height or too much time has passed
-                    if raw_height != self._pending_height:
-                        self._pending_height = raw_height
-                        self._pending_count = 1
-                        self._pending_timestamp = current_time
-                    else:
-                        # Check if the pending height reading is stale (> 10 seconds old)
-                        if current_time - self._pending_timestamp > 10.0:
-                            _LOGGER.debug(
-                                "Resetting stale pending height (%.1f seconds old)",
-                                current_time - self._pending_timestamp
-                            )
-                            self._pending_count = 1
-                            self._pending_timestamp = current_time
-                        else:
-                            self._pending_count += 1
-
-                    # Require 3 consecutive packets (approx 500ms) to accept a large jump
-                    if self._pending_count < 3:
-                        _LOGGER.debug(
-                            "Ignoring suspicious height jump from %.1f to %.1f (Count: %d)",
-                            self._current_height, raw_height, self._pending_count
-                        )
-                        return
-                    else:
-                        _LOGGER.debug("Accepting large height jump to %.1f after confirmation", raw_height)
-                        self._pending_height = None
-                        self._pending_count = 0
-                        self._pending_timestamp = 0.0
-                else:
-                    # Normal change, reset pending
-                    self._pending_height = None
-                    self._pending_count = 0
-                    self._pending_timestamp = 0.0
-
             # Determine direction
             if self._current_height is not None:
                 if raw_height > self._current_height:
@@ -700,8 +663,8 @@ async def discover_desks(timeout: float = DEFAULT_SCAN_TIMEOUT) -> list[BLEDevic
 
     desks = []
     for device in devices:
-        # Filter by name prefix - Classic desks use "BLT_"
-        if device.name and device.name.startswith(DEVICE_NAME_PREFIX_CLASSIC):
+        # Filter by name prefixes - Classic desks use "BLT_"; MX series uses "MX"
+        if device.name and any(device.name.startswith(p) for p in DEVICE_NAME_PREFIXES):
             _LOGGER.info("Found desk: %s (%s)", device.name, device.address)
             desks.append(device)
 

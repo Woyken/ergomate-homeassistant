@@ -4,7 +4,7 @@ from __future__ import annotations
 from homeassistant.config_entries import ConfigEntry
 from homeassistant.helpers.entity import DeviceInfo, Entity
 
-from .const import DOMAIN
+from .const import DOMAIN, CONF_HEIGHT_OFFSET, DEFAULT_HEIGHT_OFFSET
 from .desk_api import ErgomateDesk
 
 
@@ -37,6 +37,14 @@ class ErgomateEntity(Entity):
     def _notification_callback(self, sender: int, data: bytearray) -> None:
         """Handle height updates."""
         self.async_write_ha_state()
+
+    @property
+    def height_offset(self) -> float:
+        """Configured height offset in cm (positive raises reported value)."""
+        try:
+            return float(self._entry.options.get(CONF_HEIGHT_OFFSET, DEFAULT_HEIGHT_OFFSET))
+        except (TypeError, ValueError):
+            return DEFAULT_HEIGHT_OFFSET
 
     @property
     def available(self) -> bool:

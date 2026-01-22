@@ -18,7 +18,7 @@ async def async_get_config_entry_diagnostics(
     hass: HomeAssistant, entry: ConfigEntry
 ) -> dict[str, Any]:
     """Return diagnostics for a config entry."""
-    desk: ErgomateDesk = hass.data[DOMAIN][entry.entry_id]
+    desk: ErgomateDesk = entry.runtime_data
 
     return {
         "entry": {

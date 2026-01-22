@@ -47,12 +47,14 @@ class ErgomateDeskHeightNumber(ErgomateEntity, NumberEntity):
 
     @property
     def native_value(self) -> float | None:
-        """Return the current value."""
-        return self._desk.current_height
+        """Return the current value (with offset applied)."""
+        if self._desk.current_height is None:
+            return None
+        return round(self._desk.current_height + self.height_offset, 1)
 
     async def async_set_native_value(self, value: float) -> None:
-        """Set the value."""
+        """Set the value. Convert display value (with offset) to physical target."""
         try:
-            await self._desk.move_to_height(value)
+            await self._desk.move_to_height(value - self.height_offset)
         except Exception as err:
             raise HomeAssistantError(f"Failed to set desk height to {value}: {err}") from err

@@ -57,3 +57,18 @@ test_credentials.json
 # UV
 .python-version
 uv.lock
+
+# Reverse engineering - decompiled output
+jadx_sources/
+jadx sources/
+nl.gravity.ergomate_extracted/
+hermes_rs/
+hermes_dec_output.js
+*.apk
+*.xapk
+bytecode_output.txt
+bytecode_ouput.txt
+strings_output.txt
+strings_ouput.txt
+modules_ouput.txt
+index.android.bundle

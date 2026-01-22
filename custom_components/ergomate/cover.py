@@ -76,7 +76,8 @@ class ErgomateDeskCover(ErgomateEntity, CoverEntity):
         """Return if the cover is closed (at min height)."""
         if self._desk.current_height is None:
             return None
-        return self._desk.current_height <= self._min_height + 1
+        adjusted = self._desk.current_height + self.height_offset
+        return adjusted <= self._min_height + 1
 
     @property
     def current_cover_position(self) -> int | None:
@@ -87,15 +88,13 @@ class ErgomateDeskCover(ErgomateEntity, CoverEntity):
         if self._desk.current_height is None:
             return None
 
-        # Map height to 0-100
-        # Height range: 65 - 130
-        # Position = (current - min) / (max - min) * 100
-
+        # Map height to 0-100 with offset
         range_cm = self._max_height - self._min_height
         if range_cm <= 0:
             return 0
 
-        position = ((self._desk.current_height - self._min_height) / range_cm) * 100
+        adjusted = self._desk.current_height + self.height_offset
+        position = ((adjusted - self._min_height) / range_cm) * 100
         return int(max(0, min(100, position)))
 
     @property
@@ -135,9 +134,11 @@ class ErgomateDeskCover(ErgomateEntity, CoverEntity):
 
         # Map 0-100 to height
         range_cm = self._max_height - self._min_height
-        target_height = self._min_height + (position / 100.0) * range_cm
+        target_height_display = self._min_height + (position / 100.0) * range_cm
+        # Convert display target (with offset) to physical target
+        target_height_physical = target_height_display - self.height_offset
 
         try:
-            await self._desk.move_to_height(target_height)
+            await self._desk.move_to_height(target_height_physical)
         except Exception as err:
             raise HomeAssistantError(f"Failed to move desk to position {position}: {err}") from err
